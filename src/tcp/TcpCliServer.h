@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <Ethernet.h>
 
-class TcpServer
+class TcpCliServer
 {
 public:
     void begin();

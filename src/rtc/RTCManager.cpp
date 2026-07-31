@@ -10,7 +10,10 @@ float RTCManager::getTemperature()
     return rtc.getTemperature();
 }
 
-
+DateTime RTCManager::now()
+{
+    return rtc.now();
+}
 
 bool RTCManager::begin()
 {

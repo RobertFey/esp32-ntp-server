@@ -7,8 +7,11 @@
 #include "config/ConfigManager.h"
 #include "ethernet/EthernetManager.h"
 #include "tcp/TcpCliServer.h"
+#include "ntp/NtpServer.h"
 
-TcpServer tcpServer;
+
+NtpServer ntpServer;
+TcpCliServer tcpCliServer;
 EthernetManager ethernetManager;
 ConfigManager configManager;
 RTCManager rtcManager;
@@ -33,25 +36,37 @@ void setup()
     configManager.begin();
     configManager.load();
 
+  
     if (ethernetManager.begin())
     {
         Serial.println("Ethernet started");
+        Serial.print("IP: ");
+        Serial.println(ethernetManager.localIP());
+
+        tcpCliServer.begin();
+
+        if (ntpServer.begin())
+        {
+            Serial.println("NTP server started");
+        }
+        else
+        {
+            Serial.println("NTP server failed");
+        }
     }
     else
     {
         Serial.println("Ethernet failed");
     }
 
-    if (ethernetManager.begin())
-    {
-        tcpServer.begin();
-    }
-
+    ntpServer.begin();
+ 
     cli.begin(serialInterface);
 }
 
 void loop()
 {
     cli.process();      // Serial
-    tcpServer.process(); // TCP
+    // tcpCliServer.process(); // TCP CLI
+    ntpServer.process(); // NTP
 }

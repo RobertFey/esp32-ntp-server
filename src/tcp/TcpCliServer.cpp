@@ -5,14 +5,14 @@
 
 extern Cli cli;
 
-void TcpServer::begin()
+void TcpCliServer::begin()
 {
     _server.begin();
 
     Serial.println("TCP CLI started on port 23");
 }
 
-void TcpServer::process()
+void TcpCliServer::process()
 {
     if (!_client || !_client.connected())
     {

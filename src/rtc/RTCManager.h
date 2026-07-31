@@ -8,6 +8,8 @@ class RTCManager
 public:
     bool begin();
 
+    DateTime now();
+
     String getDateTimeString();
 
     bool setTime(
