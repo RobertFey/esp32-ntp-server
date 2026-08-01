@@ -8,23 +8,35 @@
 #include "ethernet/EthernetManager.h"
 #include "tcp/TcpCliServer.h"
 #include "ntp/NtpServer.h"
+#include "network/NetworkManager.h"
+#include "wifi/WifiManager.h"
+#include "cli/commands/RTCCommands.h"
+#include "cli/commands/SystemCommands.h"
+#include "cli/commands/NetworkCommands.h"
+#include "cli/commands/WifiCommands.h"
+#include "cli/commands/NtpCommands.h"
+#include "cli/CommandRegistry.h"
 
+
+Cli cli;
+SerialCommandInterface serialInterface;
 
 NtpServer ntpServer;
 TcpCliServer tcpCliServer;
-EthernetManager ethernetManager;
-ConfigManager configManager;
+
 RTCManager rtcManager;
-Cli cli;
-SerialCommandInterface serialInterface;
+ConfigManager configManager;
+NetworkManager networkManager;
+WifiManager wifiManager;
+EthernetManager ethernetManager;
 
 
 void setup()
 {
     Serial.begin(115200);
-
     Wire.begin(21, 22);
 
+    // Initialize RTC
     if (rtcManager.begin())
     {
         Serial.println("RTC initialized");
@@ -33,15 +45,21 @@ void setup()
     {
         Serial.println("RTC not found");
     }
+
+    // Load configuration
     configManager.begin();
     configManager.load();
 
-  
-    if (ethernetManager.begin())
+    // Start network
+    if (networkManager.begin())
     {
-        Serial.println("Ethernet started");
+        Serial.println("Network started");
+
+        Serial.print("Active interface: ");
+        Serial.println(networkManager.activeInterface());
+
         Serial.print("IP: ");
-        Serial.println(ethernetManager.localIP());
+        Serial.println(networkManager.localIP());
 
         tcpCliServer.begin();
 
@@ -56,17 +74,23 @@ void setup()
     }
     else
     {
-        Serial.println("Ethernet failed");
+        Serial.println("No active network");
     }
 
-    ntpServer.begin();
- 
+    // Initialize CLI
     cli.begin(serialInterface);
+
+    // Register command handlers
+    RTCCommands::registerCommands();
+    NetworkCommands::registerCommands();
+    WifiCommands::registerCommands();
+    NtpCommands::registerCommands();
+    SystemCommands::registerCommands();
 }
 
 void loop()
 {
     cli.process();      // Serial
-    // tcpCliServer.process(); // TCP CLI
+    tcpCliServer.process(); // TCP CLI
     ntpServer.process(); // NTP
 }
