@@ -3,7 +3,9 @@
 #include "../../rtc/RTCManager.h"
 #include "../ICommandInterface.h"
 #include "../CommandRegistry.h"
+#include "../../ntp/NtpServer.h"
 
+extern NtpServer ntpServer;
 extern CommandRegistry commandRegistry;
 extern NtpServer ntpServer;
 extern RTCManager rtcManager;
@@ -17,6 +19,7 @@ bool NtpCommands::handle(const String& command, ICommandInterface& io)
             io.println("NTP Status");
             io.println("----------");
             io.println("Requests    : " + String(ntpServer.requestCount()));
+            io.println("Responses   : " + String(ntpServer.responseCount()));
             io.println("Last Client : " + ntpServer.lastClient());
             io.println("RTC Time    : " + rtcManager.getDateTimeString());
             io.println("");

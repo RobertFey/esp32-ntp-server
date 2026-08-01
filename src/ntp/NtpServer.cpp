@@ -13,9 +13,14 @@ void NtpServer::writeUint32(
     int offset,
     uint32_t value)
 {
+    // Big-endian schrijven
+    // Byte 0: LI, VN, Mode=4 (server)  
     buffer[offset + 0] = (value >> 24) & 0xFF;
+    // Byte 1: Stratum=1 (Primary reference - RTC)
     buffer[offset + 1] = (value >> 16) & 0xFF;
+    // Byte 2: Poll interval (6 = 64s)
     buffer[offset + 2] = (value >> 8) & 0xFF;
+    // Byte 3: Precision (0xEC = -20, ~1us)
     buffer[offset + 3] = value & 0xFF;
 }
 
@@ -30,16 +35,6 @@ void NtpServer::writeNtpTimestamp(
 
     // Fractionele seconden voorlopig 0
     writeUint32(buffer, offset + 4, 0);
-}
-
-uint32_t NtpServer::requestCount()
-{
-    return _requestCount;
-}
-
-String NtpServer::lastClient()
-{
-    return _lastClient;
 }
 
 bool NtpServer::begin()
@@ -180,9 +175,7 @@ void NtpServer::processWifi()
     }
 }
 
-void NtpServer::sendEthernetResponse(
-    IPAddress remoteIp,
-    uint16_t remotePort)
+void NtpServer::sendEthernetResponse(IPAddress remoteIp, uint16_t remotePort)
 {
     DateTime now = rtcManager.now();
     uint32_t unixTime = now.unixtime();
@@ -212,15 +205,37 @@ void NtpServer::sendEthernetResponse(
         ethernetUdp.stop();
         delay(100);
         ethernetStarted = ethernetUdp.begin(NTP_PORT);
+    } else
+    {
+        _responseCount++;
     }
 }
 
-void NtpServer::sendWifiResponse(
-    IPAddress remoteIp,
-    uint16_t remotePort)
+void NtpServer::sendWifiResponse(IPAddress remoteIp, uint16_t remotePort)
 {
     DateTime now = rtcManager.now();
     uint32_t unixTime = now.unixtime();
+
+
+
+    Serial.print("RTC Time: ");
+    Serial.print(now.year());
+    Serial.print("-");
+    Serial.print(now.month());
+    Serial.print("-");
+    Serial.print(now.day());
+    Serial.print(" ");
+    Serial.print(now.hour());
+    Serial.print(":");
+    Serial.print(now.minute());
+    Serial.print(":");
+    Serial.println(now.second());
+
+    Serial.print("Unix Time: ");
+    Serial.println(now.unixtime());
+
+
+
 
     uint8_t response[NTP_PACKET_SIZE];
     buildResponse(response, unixTime);
@@ -247,6 +262,9 @@ void NtpServer::sendWifiResponse(
         wifiUdp.stop();
         delay(100);
         wifiStarted = wifiUdp.begin(NTP_PORT);
+    } else
+    {
+        _responseCount++;
     }
 }
 
@@ -300,4 +318,19 @@ void NtpServer::buildResponse(
 
     // Transmit Timestamp
     writeNtpTimestamp(response, 40, unixTime);
+}
+
+uint32_t NtpServer::requestCount()
+{
+    return _requestCount;
+}
+
+uint32_t NtpServer::responseCount()
+{
+    return _responseCount;
+}
+
+String NtpServer::lastClient()
+{
+    return _lastClient;
 }

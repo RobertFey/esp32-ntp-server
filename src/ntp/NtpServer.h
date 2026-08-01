@@ -7,50 +7,52 @@
 
 class NtpServer
 {
-public:
-    bool begin();
-    void process();
+    public:
+        bool begin();
+        void process();
 
-    uint32_t requestCount();
-    String lastClient();
+        uint32_t requestCount();
+        uint32_t responseCount();
+        String lastClient();
 
-private:
-    static const uint16_t NTP_PORT = 123;
-    static const uint16_t NTP_PACKET_SIZE = 48;
+    private:
+        static const uint16_t NTP_PORT = 123;
+        static const uint16_t NTP_PACKET_SIZE = 48;
+        
+        EthernetUDP ethernetUdp;
+        WiFiUDP wifiUdp;
+        
+        uint8_t packetBuffer[NTP_PACKET_SIZE];
+        
+        bool ethernetStarted = false;
+        bool wifiStarted = false;
+        
+        uint32_t _requestCount = 0;
+        uint32_t _responseCount = 0;
+        String _lastClient = "";
 
-    EthernetUDP ethernetUdp;
-    WiFiUDP wifiUdp;
+        void processEthernet();
+        void processWifi();
 
-    uint8_t packetBuffer[NTP_PACKET_SIZE];
+        void sendEthernetResponse(
+            IPAddress remoteIp,
+            uint16_t remotePort);
 
-    bool ethernetStarted = false;
-    bool wifiStarted = false;
+        void sendWifiResponse(
+            IPAddress remoteIp,
+            uint16_t remotePort);
 
-    uint32_t _requestCount = 0;
-    String _lastClient = "";
+        void buildResponse(
+            uint8_t* response,
+            uint32_t unixTime);
 
-    void processEthernet();
-    void processWifi();
+        void writeUint32(
+            uint8_t* buffer,
+            int offset,
+            uint32_t value);
 
-    void sendEthernetResponse(
-        IPAddress remoteIp,
-        uint16_t remotePort);
-
-    void sendWifiResponse(
-        IPAddress remoteIp,
-        uint16_t remotePort);
-
-    void buildResponse(
-        uint8_t* response,
-        uint32_t unixTime);
-
-    void writeUint32(
-        uint8_t* buffer,
-        int offset,
-        uint32_t value);
-
-    void writeNtpTimestamp(
-        uint8_t* buffer,
-        int offset,
-        uint32_t unixTime);
+        void writeNtpTimestamp(
+            uint8_t* buffer,
+            int offset,
+            uint32_t unixTime);
 };
