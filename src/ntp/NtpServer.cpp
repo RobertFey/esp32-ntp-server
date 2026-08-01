@@ -1,135 +1,13 @@
-#include <Arduino.h>
 #include "NtpServer.h"
+
 #include "../rtc/RTCManager.h"
+#include "../network/NetworkManager.h"
 
 extern RTCManager rtcManager;
+extern NetworkManager networkManager;
 
-
-// Verschil tussen Unix epoch 1970 en NTP epoch 1900
 static const uint32_t NTP_EPOCH_OFFSET = 2208988800UL;
 
-bool NtpServer::begin()
-{
-    return udp.begin(NTP_PORT);
-}
-
-void NtpServer::process()
-{
-    int packetSize = udp.parsePacket();
-
-    if (packetSize <= 0)
-    {
-        return;
-    }
-
-    Serial.print("UDP packet received, size=");
-    Serial.println(packetSize);
-
-    if (packetSize < NTP_PACKET_SIZE)
-    {
-        while (udp.available())
-        {
-            udp.read();
-        }
-
-        Serial.println("NTP packet too small");
-        return;
-    }
-
-    udp.read(packetBuffer, NTP_PACKET_SIZE);
-
-    IPAddress remoteIp = udp.remoteIP();
-    uint16_t remotePort = udp.remotePort();
-
-    Serial.println("NTP request received");
-
-    Serial.print("Byte0: 0x");
-    Serial.println(packetBuffer[0], HEX);
-
-    Serial.print("Remote: ");
-    Serial.print(remoteIp);
-    Serial.print(":");
-    Serial.println(remotePort);
-
-    sendResponse(remoteIp, remotePort);
-
-    while (udp.available())
-    {
-        udp.read();
-    }
-}
-
-void NtpServer::sendResponse(
-    IPAddress remoteIp,
-    uint16_t remotePort)
-{
-    DateTime now = rtcManager.now();
-    uint32_t unixTime = now.unixtime();
-
-    uint8_t response[NTP_PACKET_SIZE];
-    memset(response, 0, NTP_PACKET_SIZE);
-
-    // Voor test: NTP version 3 server response
-    response[0] = 0x1C; // LI=0, VN=3, Mode=4
-
-    response[1] = 2;    // Stratum
-    response[2] = 6;    // Poll
-    response[3] = 0xEC; // Precision
-
-    writeUint32(response, 4, 0x00010000);
-    writeUint32(response, 8, 0x00010000);
-
-    response[12] = 'D';
-    response[13] = 'S';
-    response[14] = '3';
-    response[15] = '2';
-
-    writeNtpTimestamp(response, 16, unixTime);
-
-    // Originate timestamp = client transmit timestamp
-    for (int i = 0; i < 8; i++)
-    {
-        response[24 + i] = packetBuffer[40 + i];
-    }
-
-    writeNtpTimestamp(response, 32, unixTime);
-    writeNtpTimestamp(response, 40, unixTime);
-
-    Serial.print("Response Byte0: 0x");
-    Serial.println(response[0], HEX);
-
-    Serial.print("Unix time: ");
-    Serial.println(unixTime);
-
-    Serial.print("Sending to: ");
-    Serial.print(remoteIp);
-    Serial.print(":");
-    Serial.println(remotePort);
-
-    int beginResult = udp.beginPacket(remoteIp, remotePort);
-
-    Serial.print("beginPacket result: ");
-    Serial.println(beginResult);
-
-    size_t written = udp.write(response, NTP_PACKET_SIZE);
-
-    Serial.print("UDP bytes written: ");
-    Serial.println(written);
-
-    int endResult = udp.endPacket();
-
-    Serial.print("endPacket result: ");
-    Serial.println(endResult);
-
-    if (endResult == 0)
-    {
-        Serial.println("UDP send failed, restarting UDP socket");
-
-        udp.stop();
-        delay(100);
-        udp.begin(NTP_PORT);
-    }
-}
 void NtpServer::writeUint32(
     uint8_t* buffer,
     int offset,
@@ -150,7 +28,276 @@ void NtpServer::writeNtpTimestamp(
 
     writeUint32(buffer, offset, ntpSeconds);
 
-    // Fractionele seconden.
-    // Voor deze eerste versie gebruiken we 0.
+    // Fractionele seconden voorlopig 0
     writeUint32(buffer, offset + 4, 0);
+}
+
+uint32_t NtpServer::requestCount()
+{
+    return _requestCount;
+}
+
+String NtpServer::lastClient()
+{
+    return _lastClient;
+}
+
+bool NtpServer::begin()
+{
+    bool started = false;
+
+    if (networkManager.ethernetConnected())
+    {
+        ethernetStarted = ethernetUdp.begin(NTP_PORT);
+
+        if (ethernetStarted)
+        {
+            Serial.println("NTP Ethernet listener started");
+            started = true;
+        }
+        else
+        {
+            Serial.println("NTP Ethernet listener failed");
+        }
+    }
+
+    if (networkManager.wifiConnected())
+    {
+        wifiStarted = wifiUdp.begin(NTP_PORT);
+
+        if (wifiStarted)
+        {
+            Serial.println("NTP WiFi listener started");
+            started = true;
+        }
+        else
+        {
+            Serial.println("NTP WiFi listener failed");
+        }
+    }
+
+    return started;
+}
+
+void NtpServer::process()
+{
+    if (ethernetStarted && networkManager.ethernetConnected())
+    {
+        processEthernet();
+    }
+
+    if (wifiStarted && networkManager.wifiConnected())
+    {
+        processWifi();
+    }
+}
+
+void NtpServer::processEthernet()
+{
+    int packetSize = ethernetUdp.parsePacket();
+
+    if (packetSize <= 0)
+    {
+        return;
+    }
+
+    Serial.print("Ethernet NTP packet, size=");
+    Serial.println(packetSize);
+
+    if (packetSize < NTP_PACKET_SIZE)
+    {
+        while (ethernetUdp.available())
+        {
+            ethernetUdp.read();
+        }
+
+        Serial.println("Ethernet NTP packet too small");
+        return;
+    }
+
+    ethernetUdp.read(packetBuffer, NTP_PACKET_SIZE);
+
+    IPAddress remoteIp = ethernetUdp.remoteIP();
+    uint16_t remotePort = ethernetUdp.remotePort();
+
+    _requestCount++;
+    _lastClient = remoteIp.toString();
+
+    Serial.print("Ethernet NTP request from ");
+    Serial.print(remoteIp);
+    Serial.print(":");
+    Serial.println(remotePort);
+
+    sendEthernetResponse(remoteIp, remotePort);
+
+    while (ethernetUdp.available())
+    {
+        ethernetUdp.read();
+    }
+}
+
+void NtpServer::processWifi()
+{
+    int packetSize = wifiUdp.parsePacket();
+
+    if (packetSize <= 0)
+    {
+        return;
+    }
+
+    Serial.print("WiFi NTP packet, size=");
+    Serial.println(packetSize);
+
+    if (packetSize < NTP_PACKET_SIZE)
+    {
+        while (wifiUdp.available())
+        {
+            wifiUdp.read();
+        }
+
+        Serial.println("WiFi NTP packet too small");
+        return;
+    }
+
+    wifiUdp.read(packetBuffer, NTP_PACKET_SIZE);
+
+    IPAddress remoteIp = wifiUdp.remoteIP();
+    uint16_t remotePort = wifiUdp.remotePort();
+
+    _requestCount++;
+    _lastClient = remoteIp.toString();
+
+    Serial.print("WiFi NTP request from ");
+    Serial.print(remoteIp);
+    Serial.print(":");
+    Serial.println(remotePort);
+
+    sendWifiResponse(remoteIp, remotePort);
+
+    while (wifiUdp.available())
+    {
+        wifiUdp.read();
+    }
+}
+
+void NtpServer::sendEthernetResponse(
+    IPAddress remoteIp,
+    uint16_t remotePort)
+{
+    DateTime now = rtcManager.now();
+    uint32_t unixTime = now.unixtime();
+
+    uint8_t response[NTP_PACKET_SIZE];
+    buildResponse(response, unixTime);
+
+    int beginResult = ethernetUdp.beginPacket(remoteIp, remotePort);
+
+    Serial.print("Ethernet beginPacket: ");
+    Serial.println(beginResult);
+
+    size_t written = ethernetUdp.write(response, NTP_PACKET_SIZE);
+
+    Serial.print("Ethernet bytes written: ");
+    Serial.println(written);
+
+    int endResult = ethernetUdp.endPacket();
+
+    Serial.print("Ethernet endPacket: ");
+    Serial.println(endResult);
+
+    if (endResult == 0)
+    {
+        Serial.println("Ethernet UDP send failed, restarting socket");
+
+        ethernetUdp.stop();
+        delay(100);
+        ethernetStarted = ethernetUdp.begin(NTP_PORT);
+    }
+}
+
+void NtpServer::sendWifiResponse(
+    IPAddress remoteIp,
+    uint16_t remotePort)
+{
+    DateTime now = rtcManager.now();
+    uint32_t unixTime = now.unixtime();
+
+    uint8_t response[NTP_PACKET_SIZE];
+    buildResponse(response, unixTime);
+
+    int beginResult = wifiUdp.beginPacket(remoteIp, remotePort);
+
+    Serial.print("WiFi beginPacket: ");
+    Serial.println(beginResult);
+
+    size_t written = wifiUdp.write(response, NTP_PACKET_SIZE);
+
+    Serial.print("WiFi bytes written: ");
+    Serial.println(written);
+
+    int endResult = wifiUdp.endPacket();
+
+    Serial.print("WiFi endPacket: ");
+    Serial.println(endResult);
+
+    if (endResult == 0)
+    {
+        Serial.println("WiFi UDP send failed, restarting socket");
+
+        wifiUdp.stop();
+        delay(100);
+        wifiStarted = wifiUdp.begin(NTP_PORT);
+    }
+}
+
+void NtpServer::buildResponse(
+    uint8_t* response,
+    uint32_t unixTime)
+{
+    memset(response, 0, NTP_PACKET_SIZE);
+
+    /*
+        LI = 0
+        VN = 3
+        Mode = 4 server
+
+        00 011 100 = 0x1C
+    */
+    response[0] = 0x1C;
+
+    // Stratum 2 voor eerste stabiele test
+    response[1] = 2;
+
+    // Poll interval
+    response[2] = 6;
+
+    // Precision
+    response[3] = 0xEC;
+
+    // Root Delay
+    writeUint32(response, 4, 0x00010000);
+
+    // Root Dispersion
+    writeUint32(response, 8, 0x00010000);
+
+    // Reference ID
+    response[12] = 'D';
+    response[13] = 'S';
+    response[14] = '3';
+    response[15] = '2';
+
+    // Reference Timestamp
+    writeNtpTimestamp(response, 16, unixTime);
+
+    // Originate Timestamp = client transmit timestamp uit request
+    for (int i = 0; i < 8; i++)
+    {
+        response[24 + i] = packetBuffer[40 + i];
+    }
+
+    // Receive Timestamp
+    writeNtpTimestamp(response, 32, unixTime);
+
+    // Transmit Timestamp
+    writeNtpTimestamp(response, 40, unixTime);
 }

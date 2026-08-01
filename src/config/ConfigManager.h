@@ -18,6 +18,27 @@ struct NetworkConfig
     uint8_t mac[6];
 };
 
+struct WifiConfig
+{
+    bool enabled;
+    
+    bool dhcp;
+
+    String ssid;
+    String password;
+
+    IPAddress ip;
+    IPAddress subnet;
+    IPAddress gateway;
+    IPAddress dns;
+};
+
+struct SystemConfig
+{
+    NetworkConfig ethernet;
+    WifiConfig wifi;
+};
+
 class ConfigManager
 {
 public:
@@ -36,8 +57,10 @@ public:
         const String& ipAddress);
 
     NetworkConfig& network();
+    WifiConfig& wifi();
 
 private:
     Preferences prefs;
     NetworkConfig netConfig;
+    WifiConfig wifiConfig;
 };

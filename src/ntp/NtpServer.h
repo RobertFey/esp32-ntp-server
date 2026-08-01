@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 #include <EthernetUdp.h>
+#include <WiFiUdp.h>
+#include <IPAddress.h>
 
 class NtpServer
 {
@@ -9,14 +11,38 @@ public:
     bool begin();
     void process();
 
+    uint32_t requestCount();
+    String lastClient();
+
 private:
     static const uint16_t NTP_PORT = 123;
     static const uint16_t NTP_PACKET_SIZE = 48;
 
-    EthernetUDP udp;
+    EthernetUDP ethernetUdp;
+    WiFiUDP wifiUdp;
+
     uint8_t packetBuffer[NTP_PACKET_SIZE];
 
-    void sendResponse(IPAddress remoteIp, uint16_t remotePort);
+    bool ethernetStarted = false;
+    bool wifiStarted = false;
+
+    uint32_t _requestCount = 0;
+    String _lastClient = "";
+
+    void processEthernet();
+    void processWifi();
+
+    void sendEthernetResponse(
+        IPAddress remoteIp,
+        uint16_t remotePort);
+
+    void sendWifiResponse(
+        IPAddress remoteIp,
+        uint16_t remotePort);
+
+    void buildResponse(
+        uint8_t* response,
+        uint32_t unixTime);
 
     void writeUint32(
         uint8_t* buffer,

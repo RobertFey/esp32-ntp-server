@@ -17,71 +17,41 @@ bool ConfigManager::begin()
 void ConfigManager::load()
 {
     netConfig.dhcp = prefs.getBool("dhcp", true);
+    netConfig.hostname = prefs.getString("hostname", "esp32-ntp");
+    netConfig.ip.fromString(prefs.getString("ip", "192.168.2.100"));
+    netConfig.subnet.fromString(prefs.getString("subnet", "255.255.255.0"));
+    netConfig.gateway.fromString(prefs.getString("gateway", "192.168.2.254"));
+    netConfig.dns.fromString(prefs.getString("dns", "8.8.8.8"));
 
-    netConfig.hostname =
-        prefs.getString("hostname", "esp32-ntp");
+    wifiConfig.enabled = prefs.getBool("wifi_en", false);
+    wifiConfig.ssid = prefs.getString("wifi_ssid", "");
+    wifiConfig.password = prefs.getString("wifi_pwd", "");
+    wifiConfig.dhcp = prefs.getBool("wifi_dhcp", true);
 
-    netConfig.ip.fromString(
-        prefs.getString("ip", "192.168.2.100"));
+    uint8_t defaultMac[6] = { 0x02, 0x00, 0x00, 0x00, 0x00, 0x01 };
 
-    netConfig.subnet.fromString(
-        prefs.getString("subnet", "255.255.255.0"));
-
-    netConfig.gateway.fromString(
-        prefs.getString("gateway", "192.168.2.254"));
-
-    netConfig.dns.fromString(
-        prefs.getString("dns", "8.8.8.8"));
-
-
-    uint8_t defaultMac[6] =
-    {
-        0x02, 0x00, 0x00, 0x00, 0x00, 0x01 
-    };
-
-    prefs.getBytes(
-        "mac",
-        netConfig.mac,
-        sizeof(netConfig.mac));
+    prefs.getBytes("mac", netConfig.mac, sizeof(netConfig.mac));
             
     if (prefs.getBytesLength("mac") != 6)
     {
-        memcpy(
-            netConfig.mac,
-            defaultMac,
-            sizeof(defaultMac)
-        );
+        memcpy(netConfig.mac, defaultMac, sizeof(defaultMac));
     }
 }
 
 void ConfigManager::save()
 {
     prefs.putBool("dhcp", netConfig.dhcp);
+    prefs.putString("hostname", netConfig.hostname);
+    prefs.putString("ip", netConfig.ip.toString());
+    prefs.putString("subnet", netConfig.subnet.toString());
+    prefs.putString("gateway", netConfig.gateway.toString());
+    prefs.putString("dns", netConfig.dns.toString());
+    prefs.putBytes("mac", netConfig.mac, sizeof(netConfig.mac));
 
-    prefs.putString(
-        "hostname",
-        netConfig.hostname);
-
-    prefs.putString(
-        "ip",
-        netConfig.ip.toString());
-
-    prefs.putString(
-        "subnet",
-        netConfig.subnet.toString());
-
-    prefs.putString(
-        "gateway",
-        netConfig.gateway.toString());
-
-    prefs.putString(
-        "dns",
-        netConfig.dns.toString());
-
-    prefs.putBytes(
-        "mac",
-        netConfig.mac,
-        sizeof(netConfig.mac));
+    prefs.putBool("wifi_en", wifiConfig.enabled);
+    prefs.putString("wifi_ssid", wifiConfig.ssid);
+    prefs.putString("wifi_pwd", wifiConfig.password);
+    prefs.putBool("wifi_dhcp", wifiConfig.dhcp);
 }
 
 
@@ -175,4 +145,9 @@ bool ConfigManager::parseMacAddress(
     }
 
     return true;
+}
+
+WifiConfig& ConfigManager::wifi()
+{
+    return wifiConfig;
 }
