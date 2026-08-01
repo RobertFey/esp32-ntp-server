@@ -28,6 +28,10 @@ void ConfigManager::load()
     wifiConfig.password = prefs.getString("wifi_pwd", "");
     wifiConfig.dhcp = prefs.getBool("wifi_dhcp", true);
 
+    ntpConfig.server = prefs.getString("ntp_server", "pool.ntp.org");
+    ntpConfig.autoSync = prefs.getBool("ntp_auto", false);
+    ntpConfig.syncIntervalHours = prefs.getUInt("ntp_interval", 24);
+
     uint8_t defaultMac[6] = { 0x02, 0x00, 0x00, 0x00, 0x00, 0x01 };
 
     prefs.getBytes("mac", netConfig.mac, sizeof(netConfig.mac));
@@ -52,6 +56,10 @@ void ConfigManager::save()
     prefs.putString("wifi_ssid", wifiConfig.ssid);
     prefs.putString("wifi_pwd", wifiConfig.password);
     prefs.putBool("wifi_dhcp", wifiConfig.dhcp);
+
+    prefs.putString("ntp_server", ntpConfig.server);
+    prefs.putBool("ntp_auto", ntpConfig.autoSync);
+    prefs.putUInt("ntp_interval", ntpConfig.syncIntervalHours);
 }
 
 
@@ -150,4 +158,9 @@ bool ConfigManager::parseMacAddress(
 WifiConfig& ConfigManager::wifi()
 {
     return wifiConfig;
+}
+
+NtpConfig& ConfigManager::ntp()
+{
+    return ntpConfig;
 }

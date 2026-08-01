@@ -4,6 +4,15 @@
 #include <IPAddress.h>
 #include <Preferences.h>
 
+
+struct NtpConfig
+{
+    String server;
+    bool autoSync;
+    uint32_t syncIntervalHours;
+};
+
+
 struct NetworkConfig
 {
     bool dhcp;
@@ -58,9 +67,11 @@ public:
 
     NetworkConfig& network();
     WifiConfig& wifi();
+    NtpConfig& ntp();
 
 private:
     Preferences prefs;
     NetworkConfig netConfig;
     WifiConfig wifiConfig;
+    NtpConfig ntpConfig;
 };

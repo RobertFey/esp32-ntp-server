@@ -16,13 +16,16 @@
 #include "cli/commands/WifiCommands.h"
 #include "cli/commands/NtpCommands.h"
 #include "cli/CommandRegistry.h"
+#include "ntp/NtpClient.h"
 
 
 Cli cli;
 SerialCommandInterface serialInterface;
 
+
 NtpServer ntpServer;
 TcpCliServer tcpCliServer;
+NtpClient ntpClient;
 
 RTCManager rtcManager;
 ConfigManager configManager;
@@ -90,7 +93,8 @@ void setup()
 
 void loop()
 {
-    cli.process();      // Serial
+    cli.process();          // Serial
     tcpCliServer.process(); // TCP CLI
-    ntpServer.process(); // NTP
+    ntpServer.process();    // NTP
+    ntpClient.process();    // NTP client auto sync
 }
