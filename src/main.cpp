@@ -19,13 +19,13 @@
 #include "ntp/NtpClient.h"
 #include "tcp/WifiCliServer.h"
 #include "indicators/IndicatorManager.h"
-
+#include "tasks/TaskManager.h"
 
 Cli cli;
 SerialCommandInterface serialInterface;
 WifiCliServer wifiCliServer;
 IndicatorManager indicatorManager;
-
+TaskManager taskManager;
 
 NtpServer ntpServer;
 TcpCliServer tcpCliServer;
@@ -43,6 +43,7 @@ void setup()
 {
     Serial.begin(115200);
     Wire.begin(21, 22);
+    // taskManager.begin();
 
     // Initialize RTC
     if (rtcManager.begin())
@@ -114,11 +115,12 @@ void setup()
 
 void loop()
 {
+    // vTaskDelay(portMAX_DELAY);
+    ntpServer.process();    // NTP
+    ntpClient.process();    // NTP client auto sync
     cli.process();          // Serial
     tcpCliServer.process(); // TCP CLI
     wifiCliServer.process(); // WiFi CLI
-    ntpServer.process();    // NTP
-    ntpClient.process();    // NTP client auto sync
     indicatorManager.process(); // Process indicator LEDs
 
     // Check network state and update indicator manager RUN LED accordingly
