@@ -17,10 +17,12 @@
 #include "cli/commands/NtpCommands.h"
 #include "cli/CommandRegistry.h"
 #include "ntp/NtpClient.h"
+#include "tcp/WifiCliServer.h"
 
 
 Cli cli;
 SerialCommandInterface serialInterface;
+WifiCliServer wifiCliServer;
 
 
 NtpServer ntpServer;
@@ -64,7 +66,19 @@ void setup()
         Serial.print("IP: ");
         Serial.println(networkManager.localIP());
 
-        tcpCliServer.begin();
+        if (ethernetManager.isConnected())
+        {
+            tcpCliServer.begin();
+            Serial.print("Ethernet CLI available at: ");
+            Serial.println(ethernetManager.localIP());
+        }
+
+        if (wifiManager.isConnected())
+        {
+            wifiCliServer.begin();
+            Serial.print("WiFi CLI available at: ");
+            Serial.println(wifiManager.localIP());
+        }
 
         if (ntpServer.begin())
         {
@@ -95,6 +109,7 @@ void loop()
 {
     cli.process();          // Serial
     tcpCliServer.process(); // TCP CLI
+    wifiCliServer.process(); // WiFi CLI
     ntpServer.process();    // NTP
     ntpClient.process();    // NTP client auto sync
 }

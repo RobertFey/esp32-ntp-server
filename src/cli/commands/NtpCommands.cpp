@@ -30,6 +30,7 @@ bool NtpCommands::handle(const String& command, ICommandInterface& io)
         io.println("");
         io.println("Requests    : " + String(ntpServer.requestCount()));
         io.println("Responses   : " + String(ntpServer.responseCount()));
+        io.println("Send Errors : " + String(ntpServer.sendErrorCount()));
         io.println("Last Client : " + ntpServer.lastClient());
         io.println("");
         io.println("RTC Time    : " + rtcManager.getDateTimeString());
@@ -116,7 +117,22 @@ bool NtpCommands::handle(const String& command, ICommandInterface& io)
         io.println("Sync interval set to " + String(hours) + " hour(s)");
         return true;
     }
-        return false;
+
+    if (command == "ntp debug on")
+    {
+        ntpServer.setDebug(true);
+        io.println("NTP debug enabled");
+        return true;
+    }
+
+    if (command == "ntp debug off")
+    {
+        ntpServer.setDebug(false);
+        io.println("NTP debug disabled");
+        return true;
+    }
+
+    return false;
 }
 
 void NtpCommands::printHelp(ICommandInterface& io)
@@ -133,6 +149,8 @@ void NtpCommands::printHelp(ICommandInterface& io)
     io.println("ntp sync off");
     io.println("ntp show");
     io.println("ntp server <hostname>");
+    io.println("ntp debug on");
+    io.println("ntp debug off");
 }
 
 void NtpCommands::registerCommands()

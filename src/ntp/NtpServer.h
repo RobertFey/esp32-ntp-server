@@ -13,7 +13,10 @@ class NtpServer
 
         uint32_t requestCount();
         uint32_t responseCount();
+        uint32_t sendErrorCount();
         String lastClient();
+        
+        void setDebug(bool value);
 
     private:
         static const uint16_t NTP_PORT = 123;
@@ -24,9 +27,11 @@ class NtpServer
         
         uint8_t packetBuffer[NTP_PACKET_SIZE];
         
+        bool _debug = false;
         bool ethernetStarted = false;
         bool wifiStarted = false;
         
+        uint32_t _sendErrorCount = 0;
         uint32_t _requestCount = 0;
         uint32_t _responseCount = 0;
         String _lastClient = "";

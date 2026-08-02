@@ -133,33 +133,35 @@ void NtpServer::processWifi()
     {
         return;
     }
-
-    Serial.print("WiFi NTP packet, size=");
-    Serial.println(packetSize);
-
+    
     if (packetSize < NTP_PACKET_SIZE)
     {
         while (wifiUdp.available())
         {
             wifiUdp.read();
         }
-
+        
         Serial.println("WiFi NTP packet too small");
         return;
     }
-
+    
     wifiUdp.read(packetBuffer, NTP_PACKET_SIZE);
-
+    
     IPAddress remoteIp = wifiUdp.remoteIP();
     uint16_t remotePort = wifiUdp.remotePort();
-
+    
     _requestCount++;
     _lastClient = remoteIp.toString();
-
-    Serial.print("WiFi NTP request from ");
-    Serial.print(remoteIp);
-    Serial.print(":");
-    Serial.println(remotePort);
+    
+    if (_debug)
+    {
+        Serial.print("WiFi NTP packet, size=");
+        Serial.println(packetSize);
+        Serial.print("WiFi NTP request from ");
+        Serial.print(remoteIp);
+        Serial.print(":");
+        Serial.println(remotePort);
+    }
 
     sendWifiResponse(remoteIp, remotePort);
 
@@ -181,10 +183,10 @@ void NtpServer::sendEthernetResponse(IPAddress remoteIp, uint16_t remotePort)
     if (endResult == 0)
     {
         Serial.println("Ethernet UDP send failed, restarting socket");
-
         ethernetUdp.stop();
         delay(100);
         ethernetStarted = ethernetUdp.begin(NTP_PORT);
+        _sendErrorCount++;
     } else
     {
         _responseCount++;
@@ -205,10 +207,10 @@ void NtpServer::sendWifiResponse(IPAddress remoteIp, uint16_t remotePort)
     if (endResult == 0)
     {
         Serial.println("WiFi UDP send failed, restarting socket");
-
         wifiUdp.stop();
         delay(100);
         wifiStarted = wifiUdp.begin(NTP_PORT);
+        _sendErrorCount++;
     } else
     {
         _responseCount++;
@@ -278,4 +280,14 @@ uint32_t NtpServer::responseCount()
 String NtpServer::lastClient()
 {
     return _lastClient;
+}
+
+uint32_t NtpServer::sendErrorCount()
+{
+    return _sendErrorCount;
+}
+
+void NtpServer::setDebug(bool value)
+{
+    _debug = value;
 }
