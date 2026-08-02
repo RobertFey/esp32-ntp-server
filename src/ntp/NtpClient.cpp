@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include "NtpClient.h"
+#include "../ntp/NtpPacket.h"
 
 #include "../config/ConfigManager.h"
 #include "../rtc/RTCManager.h"
@@ -47,7 +48,7 @@ bool NtpClient::syncRtc()
     return syncRtcEx() == NtpSyncResult::Success;
 }
 
-bool NtpClient::queryServer( const String& hostname, uint32_t& unixTime)
+bool NtpClient::queryServer(const String& hostname, uint32_t& unixTime)
 {
     IPAddress ntpServerIp;
 
@@ -56,72 +57,59 @@ bool NtpClient::queryServer( const String& hostname, uint32_t& unixTime)
         return false;
     }
 
-    uint8_t packet[NTP_PACKET_SIZE];
+    // uint8_t packet[NTP_PACKET_SIZE];
+    // memset(packet, 0, sizeof(packet));
+    // packet[0] = 0x1B;
 
-    memset(packet, 0, sizeof(packet));
-
-    packet[0] = 0x1B;
+    NtpPacket packet;
+    packet.setClientRequest();
 
     udp.begin(2390);
-
-    udp.beginPacket(
-        ntpServerIp,
-        NTP_PORT);
-
-    udp.write(packet, sizeof(packet));
+    udp.beginPacket(ntpServerIp, NTP_PORT);
+    udp.write(packet.data(), NtpPacket::SIZE);
     udp.endPacket();
 
     unsigned long startTime = millis();
 
     while ((millis() - startTime) < 3000)
     {
-        int packetSize =
-            udp.parsePacket();
-
-        if (packetSize >= 48)
+        int packetSize = udp.parsePacket();
+        if (packetSize >= NtpPacket::SIZE)
         {
-            udp.read(packet, sizeof(packet));
-
-            uint32_t ntpSeconds =
-                ((uint32_t)packet[40] << 24) |
-                ((uint32_t)packet[41] << 16) |
-                ((uint32_t)packet[42] << 8)  |
-                ((uint32_t)packet[43]);
-
-            unixTime =
-                ntpSeconds - NTP_EPOCH_OFFSET;
-
+            NtpPacket response;
+            udp.read(response.data(), NtpPacket::SIZE);
+            unixTime = response.getTransmitUnixTime();
             udp.stop();
-
             return true;
         }
-
         delay(10);
     }
-
     udp.stop();
 
     return false;
 }
 
-
 NtpSyncResult NtpClient::syncRtcEx()
 {
     uint32_t unixTime;
 
-    if (!networkManager.isConnected())
+    String server = configManager.ntp().server;
+
+    if (server.isEmpty())
     {
-        return NtpSyncResult::NetworkUnavailable;
+        _lastSyncSuccess = false;
+        return NtpSyncResult::DnsLookupFailed;
     }
 
-    if (!queryServer( configManager.ntp().server, unixTime))
+    if (!queryServer(server, unixTime))
     {
+        _lastSyncSuccess = false;
         return NtpSyncResult::Timeout;
     }
 
     DateTime dt(unixTime);
 
-    rtcManager.setTime(
+    bool rtcOk = rtcManager.setTime(
         dt.year(),
         dt.month(),
         dt.day(),
@@ -129,8 +117,57 @@ NtpSyncResult NtpClient::syncRtcEx()
         dt.minute(),
         dt.second());
 
+    if (!rtcOk)
+    {
+        _lastSyncSuccess = false;
+        return NtpSyncResult::RtcUpdateFailed;
+    }
+
+    char buffer[32];
+
+    snprintf(
+        buffer,
+        sizeof(buffer),
+        "%04u-%02u-%02u %02u:%02u:%02u",
+        dt.year(),
+        dt.month(),
+        dt.day(),
+        dt.hour(),
+        dt.minute(),
+        dt.second());
+
+    _lastSyncTime = String(buffer);
+    _lastSyncSuccess = true;
+
     return NtpSyncResult::Success;
 }
+
+// NtpSyncResult NtpClient::syncRtcEx()
+// {
+//     uint32_t unixTime;
+
+//     if (!networkManager.isConnected())
+//     {
+//         return NtpSyncResult::NetworkUnavailable;
+//     }
+
+//     if (!queryServer( configManager.ntp().server, unixTime))
+//     {
+//         return NtpSyncResult::Timeout;
+//     }
+
+//     DateTime dt(unixTime);
+
+//     rtcManager.setTime(
+//         dt.year(),
+//         dt.month(),
+//         dt.day(),
+//         dt.hour(),
+//         dt.minute(),
+//         dt.second());
+
+//     return NtpSyncResult::Success;
+// }
 
 String NtpClient::lastSyncTime()
 {

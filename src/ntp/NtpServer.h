@@ -34,25 +34,9 @@ class NtpServer
         void processEthernet();
         void processWifi();
 
-        void sendEthernetResponse(
-            IPAddress remoteIp,
-            uint16_t remotePort);
-
-        void sendWifiResponse(
-            IPAddress remoteIp,
-            uint16_t remotePort);
-
-        void buildResponse(
-            uint8_t* response,
-            uint32_t unixTime);
-
-        void writeUint32(
-            uint8_t* buffer,
-            int offset,
-            uint32_t value);
-
-        void writeNtpTimestamp(
-            uint8_t* buffer,
-            int offset,
-            uint32_t unixTime);
+        void sendEthernetResponse(IPAddress remoteIp, uint16_t remotePort);
+        void sendWifiResponse(IPAddress remoteIp, uint16_t remotePort);
+        void buildResponse( uint8_t* response, uint32_t unixTime);
+        void writeUint32( uint8_t* buffer, int offset, uint32_t value);
+        void writeNtpTimestamp( uint8_t* buffer, int offset, uint32_t unixTime);
 };

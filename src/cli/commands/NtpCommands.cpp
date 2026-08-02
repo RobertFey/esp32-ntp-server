@@ -28,7 +28,7 @@ bool NtpCommands::handle(const String& command, ICommandInterface& io)
             io.println("Responses   : " + String(ntpServer.responseCount()));
             io.println("Last Client : " + ntpServer.lastClient());
             io.println("RTC Time    : " + rtcManager.getDateTimeString());
-            io.println("Last Sync   : " + ntpClient.lastSyncTime());
+            io.println("Last Sync   : " + String(ntpClient.lastSyncTime().isEmpty() ? "Never" : ntpClient.lastSyncTime()));
             io.println("Sync Status : " + String(ntpClient.lastSyncSuccess() ? "OK" : "FAILED"));
             io.println("");
 

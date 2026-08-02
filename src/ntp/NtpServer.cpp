@@ -1,5 +1,5 @@
 #include "NtpServer.h"
-
+#include "NtpPacket.h"
 #include "../rtc/RTCManager.h"
 #include "../network/NetworkManager.h"
 
@@ -8,10 +8,7 @@ extern NetworkManager networkManager;
 
 static const uint32_t NTP_EPOCH_OFFSET = 2208988800UL;
 
-void NtpServer::writeUint32(
-    uint8_t* buffer,
-    int offset,
-    uint32_t value)
+void NtpServer::writeUint32( uint8_t* buffer, int offset, uint32_t value)
 {
     // Big-endian schrijven
     // Byte 0: LI, VN, Mode=4 (server)  
@@ -24,10 +21,7 @@ void NtpServer::writeUint32(
     buffer[offset + 3] = value & 0xFF;
 }
 
-void NtpServer::writeNtpTimestamp(
-    uint8_t* buffer,
-    int offset,
-    uint32_t unixTime)
+void NtpServer::writeNtpTimestamp( uint8_t* buffer, int offset, uint32_t unixTime)
 {
     uint32_t ntpSeconds = unixTime + NTP_EPOCH_OFFSET;
 
@@ -178,26 +172,12 @@ void NtpServer::processWifi()
 void NtpServer::sendEthernetResponse(IPAddress remoteIp, uint16_t remotePort)
 {
     DateTime now = rtcManager.now();
-    uint32_t unixTime = now.unixtime();
+    NtpPacket packet;
 
-    uint8_t response[NTP_PACKET_SIZE];
-    buildResponse(response, unixTime);
-
-    int beginResult = ethernetUdp.beginPacket(remoteIp, remotePort);
-
-    Serial.print("Ethernet beginPacket: ");
-    Serial.println(beginResult);
-
-    size_t written = ethernetUdp.write(response, NTP_PACKET_SIZE);
-
-    Serial.print("Ethernet bytes written: ");
-    Serial.println(written);
-
+    packet.setServerResponse(now.unixtime(), &packetBuffer[40]);
+    ethernetUdp.beginPacket(remoteIp, remotePort);
+    ethernetUdp.write(packet.data(), NtpPacket::SIZE);
     int endResult = ethernetUdp.endPacket();
-
-    Serial.print("Ethernet endPacket: ");
-    Serial.println(endResult);
-
     if (endResult == 0)
     {
         Serial.println("Ethernet UDP send failed, restarting socket");
@@ -214,47 +194,14 @@ void NtpServer::sendEthernetResponse(IPAddress remoteIp, uint16_t remotePort)
 void NtpServer::sendWifiResponse(IPAddress remoteIp, uint16_t remotePort)
 {
     DateTime now = rtcManager.now();
-    uint32_t unixTime = now.unixtime();
 
+    NtpPacket packet;
 
-
-    Serial.print("RTC Time: ");
-    Serial.print(now.year());
-    Serial.print("-");
-    Serial.print(now.month());
-    Serial.print("-");
-    Serial.print(now.day());
-    Serial.print(" ");
-    Serial.print(now.hour());
-    Serial.print(":");
-    Serial.print(now.minute());
-    Serial.print(":");
-    Serial.println(now.second());
-
-    Serial.print("Unix Time: ");
-    Serial.println(now.unixtime());
-
-
-
-
-    uint8_t response[NTP_PACKET_SIZE];
-    buildResponse(response, unixTime);
-
-    int beginResult = wifiUdp.beginPacket(remoteIp, remotePort);
-
-    Serial.print("WiFi beginPacket: ");
-    Serial.println(beginResult);
-
-    size_t written = wifiUdp.write(response, NTP_PACKET_SIZE);
-
-    Serial.print("WiFi bytes written: ");
-    Serial.println(written);
+    packet.setServerResponse(now.unixtime(), &packetBuffer[40]);
+    wifiUdp.beginPacket(remoteIp, remotePort);
+    wifiUdp.write( packet.data(), NtpPacket::SIZE);
 
     int endResult = wifiUdp.endPacket();
-
-    Serial.print("WiFi endPacket: ");
-    Serial.println(endResult);
-
     if (endResult == 0)
     {
         Serial.println("WiFi UDP send failed, restarting socket");
@@ -268,9 +215,7 @@ void NtpServer::sendWifiResponse(IPAddress remoteIp, uint16_t remotePort)
     }
 }
 
-void NtpServer::buildResponse(
-    uint8_t* response,
-    uint32_t unixTime)
+void NtpServer::buildResponse(uint8_t* response, uint32_t unixTime)
 {
     memset(response, 0, NTP_PACKET_SIZE);
 

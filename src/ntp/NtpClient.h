@@ -38,9 +38,6 @@ private:
 
     String _lastSyncTime = "";
     bool _lastSyncSuccess = false;
-
-    bool queryServer(
-        const String& hostname,
-        uint32_t& unixTime);
+    bool queryServer(const String& hostname, uint32_t& unixTime);
 };
 
