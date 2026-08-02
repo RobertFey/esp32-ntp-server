@@ -18,11 +18,13 @@
 #include "cli/CommandRegistry.h"
 #include "ntp/NtpClient.h"
 #include "tcp/WifiCliServer.h"
+#include "indicators/IndicatorManager.h"
 
 
 Cli cli;
 SerialCommandInterface serialInterface;
 WifiCliServer wifiCliServer;
+IndicatorManager indicatorManager;
 
 
 NtpServer ntpServer;
@@ -35,6 +37,7 @@ NetworkManager networkManager;
 WifiManager wifiManager;
 EthernetManager ethernetManager;
 
+bool lastNetworkState = false;
 
 void setup()
 {
@@ -54,6 +57,9 @@ void setup()
     // Load configuration
     configManager.begin();
     configManager.load();
+
+    // Initialize indicator manager
+    indicatorManager.begin();
 
     // Start network
     if (networkManager.begin())
@@ -97,6 +103,7 @@ void setup()
     // Initialize CLI
     cli.begin(serialInterface);
 
+
     // Register command handlers
     RTCCommands::registerCommands();
     NetworkCommands::registerCommands();
@@ -112,4 +119,22 @@ void loop()
     wifiCliServer.process(); // WiFi CLI
     ntpServer.process();    // NTP
     ntpClient.process();    // NTP client auto sync
+    indicatorManager.process(); // Process indicator LEDs
+
+    // Check network state and update indicator manager RUN LED accordingly
+    bool networkConnected = networkManager.isConnected();
+    if (networkConnected != lastNetworkState)
+    {
+        lastNetworkState = networkConnected;
+        if (networkConnected)
+        {
+            // Network is connected, set RUN LED to normal mode
+            indicatorManager.setRunMode(RunMode::Normal);
+        }
+        else
+        {
+            // Network is disconnected, set RUN LED to no network mode
+            indicatorManager.setRunMode(RunMode::NoNetwork);
+        }
+    }
 }

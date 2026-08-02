@@ -6,10 +6,12 @@
 #include "../rtc/RTCManager.h"
 #include "../network/NetworkManager.h"
 #include "../cli/ICommandInterface.h"   
+#include <indicators/IndicatorManager.h>
 
 extern ConfigManager configManager;
 extern RTCManager rtcManager;
 extern NetworkManager networkManager;
+extern IndicatorManager indicatorManager;
 
 static const uint32_t NTP_EPOCH_OFFSET = 2208988800UL;
 
@@ -92,18 +94,20 @@ bool NtpClient::queryServer(const String& hostname, uint32_t& unixTime)
 NtpSyncResult NtpClient::syncRtcEx()
 {
     uint32_t unixTime;
-
     String server = configManager.ntp().server;
+    indicatorManager.setRunMode(RunMode::Syncing);
 
     if (server.isEmpty())
     {
         _lastSyncSuccess = false;
+        indicatorManager.error();
         return NtpSyncResult::DnsLookupFailed;
     }
-
+    
     if (!queryServer(server, unixTime))
     {
         _lastSyncSuccess = false;
+        indicatorManager.error();
         return NtpSyncResult::Timeout;
     }
 
@@ -120,6 +124,7 @@ NtpSyncResult NtpClient::syncRtcEx()
     if (!rtcOk)
     {
         _lastSyncSuccess = false;
+        indicatorManager.error();
         return NtpSyncResult::RtcUpdateFailed;
     }
 

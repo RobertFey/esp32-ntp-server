@@ -2,7 +2,9 @@
 #include "NtpPacket.h"
 #include "../rtc/RTCManager.h"
 #include "../network/NetworkManager.h"
+#include "../indicators/IndicatorManager.h"
 
+extern IndicatorManager indicatorManager;
 extern RTCManager rtcManager;
 extern NetworkManager networkManager;
 
@@ -89,33 +91,36 @@ void NtpServer::processEthernet()
     {
         return;
     }
-
-    Serial.print("Ethernet NTP packet, size=");
-    Serial.println(packetSize);
-
+    
     if (packetSize < NTP_PACKET_SIZE)
     {
         while (ethernetUdp.available())
         {
             ethernetUdp.read();
         }
-
+        
         Serial.println("Ethernet NTP packet too small");
         return;
     }
-
+    
     ethernetUdp.read(packetBuffer, NTP_PACKET_SIZE);
-
+    
     IPAddress remoteIp = ethernetUdp.remoteIP();
     uint16_t remotePort = ethernetUdp.remotePort();
-
+    
     _requestCount++;
     _lastClient = remoteIp.toString();
+    indicatorManager.requestReceived();
 
-    Serial.print("Ethernet NTP request from ");
-    Serial.print(remoteIp);
-    Serial.print(":");
-    Serial.println(remotePort);
+    if (_debug)
+    {
+        Serial.print("Ethernet NTP packet, size=");
+        Serial.println(packetSize); 
+        Serial.print("Ethernet NTP request from ");
+        Serial.print(remoteIp);
+        Serial.print(":");
+        Serial.println(remotePort);
+    }
 
     sendEthernetResponse(remoteIp, remotePort);
 
@@ -152,7 +157,8 @@ void NtpServer::processWifi()
     
     _requestCount++;
     _lastClient = remoteIp.toString();
-    
+    indicatorManager.requestReceived();
+
     if (_debug)
     {
         Serial.print("WiFi NTP packet, size=");
@@ -187,9 +193,11 @@ void NtpServer::sendEthernetResponse(IPAddress remoteIp, uint16_t remotePort)
         delay(100);
         ethernetStarted = ethernetUdp.begin(NTP_PORT);
         _sendErrorCount++;
+        indicatorManager.error();
     } else
     {
         _responseCount++;
+        indicatorManager.responseSent();
     }
 }
 
@@ -211,9 +219,11 @@ void NtpServer::sendWifiResponse(IPAddress remoteIp, uint16_t remotePort)
         delay(100);
         wifiStarted = wifiUdp.begin(NTP_PORT);
         _sendErrorCount++;
+        indicatorManager.error();
     } else
     {
         _responseCount++;
+        indicatorManager.responseSent();
     }
 }
 
