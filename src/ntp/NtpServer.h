@@ -4,6 +4,7 @@
 #include <EthernetUdp.h>
 #include <WiFiUdp.h>
 #include <IPAddress.h>
+#include "NtpPacket.h"
 
 class NtpServer
 {
@@ -24,7 +25,7 @@ class NtpServer
         
         EthernetUDP ethernetUdp;
         WiFiUDP wifiUdp;
-        
+        NtpPacket ntpPacket;
         uint8_t packetBuffer[NTP_PACKET_SIZE];
         
         bool _debug = false;
@@ -39,8 +40,8 @@ class NtpServer
         void processEthernet();
         void processWifi();
 
-        void sendEthernetResponse(IPAddress remoteIp, uint16_t remotePort);
-        void sendWifiResponse(IPAddress remoteIp, uint16_t remotePort);
+        void sendEthernetResponse(IPAddress remoteIp, uint16_t remotePort, const NtpTimestamp& receiveTimestamp);
+        void sendWifiResponse(IPAddress remoteIp, uint16_t remotePort, const NtpTimestamp& receiveTimestamp);
         void buildResponse( uint8_t* response, uint32_t unixTime);
         void writeUint32( uint8_t* buffer, int offset, uint32_t value);
         void writeNtpTimestamp( uint8_t* buffer, int offset, uint32_t unixTime);

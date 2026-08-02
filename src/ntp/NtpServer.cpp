@@ -85,7 +85,13 @@ void NtpServer::process()
 
 void NtpServer::processEthernet()
 {
+    NtpTimestamp receiveTimestamp;
+    DateTime now = rtcManager.now();
+    receiveTimestamp.unixTime = now.unixtime();
+    receiveTimestamp.millisPart = millis() % 1000;
+
     int packetSize = ethernetUdp.parsePacket();
+    
 
     if (packetSize <= 0)
     {
@@ -122,7 +128,7 @@ void NtpServer::processEthernet()
         Serial.println(remotePort);
     }
 
-    sendEthernetResponse(remoteIp, remotePort);
+    sendEthernetResponse(remoteIp, remotePort, receiveTimestamp);
 
     while (ethernetUdp.available())
     {
@@ -132,6 +138,11 @@ void NtpServer::processEthernet()
 
 void NtpServer::processWifi()
 {
+    NtpTimestamp receiveTimestamp;
+    DateTime now = rtcManager.now();
+    receiveTimestamp.unixTime = now.unixtime();
+    receiveTimestamp.millisPart = millis() % 1000;
+    
     int packetSize = wifiUdp.parsePacket();
 
     if (packetSize <= 0)
@@ -169,7 +180,7 @@ void NtpServer::processWifi()
         Serial.println(remotePort);
     }
 
-    sendWifiResponse(remoteIp, remotePort);
+    sendWifiResponse(remoteIp, remotePort, receiveTimestamp);
 
     while (wifiUdp.available())
     {
@@ -177,12 +188,12 @@ void NtpServer::processWifi()
     }
 }
 
-void NtpServer::sendEthernetResponse(IPAddress remoteIp, uint16_t remotePort)
+void NtpServer::sendEthernetResponse(IPAddress remoteIp, uint16_t remotePort, const NtpTimestamp& receiveTimestamp)
 {
     DateTime now = rtcManager.now();
     NtpPacket packet;
 
-    packet.setServerResponse(now.unixtime(), &packetBuffer[40]);
+    packet.setServerResponse(receiveTimestamp, receiveTimestamp, receiveTimestamp, &packetBuffer[40]);
     ethernetUdp.beginPacket(remoteIp, remotePort);
     ethernetUdp.write(packet.data(), NtpPacket::SIZE);
     int endResult = ethernetUdp.endPacket();
@@ -201,13 +212,13 @@ void NtpServer::sendEthernetResponse(IPAddress remoteIp, uint16_t remotePort)
     }
 }
 
-void NtpServer::sendWifiResponse(IPAddress remoteIp, uint16_t remotePort)
+void NtpServer::sendWifiResponse(IPAddress remoteIp, uint16_t remotePort, const NtpTimestamp& receiveTimestamp)
 {
     DateTime now = rtcManager.now();
 
     NtpPacket packet;
 
-    packet.setServerResponse(now.unixtime(), &packetBuffer[40]);
+    packet.setServerResponse(receiveTimestamp, receiveTimestamp, receiveTimestamp, &packetBuffer[40]);
     wifiUdp.beginPacket(remoteIp, remotePort);
     wifiUdp.write( packet.data(), NtpPacket::SIZE);
 

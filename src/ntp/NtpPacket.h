@@ -2,6 +2,12 @@
 
 #include <Arduino.h>
 
+struct NtpTimestamp
+{
+    uint32_t unixTime;
+    uint16_t millisPart;
+};
+
 class NtpPacket
 {
 public:
@@ -14,7 +20,8 @@ public:
     void clear();
     void load(const uint8_t* buffer);
     void setClientRequest();
-    void setServerResponse(uint32_t unixTime, const uint8_t* originateTimestamp);
+    // void setServerResponse(uint32_t unixTime, const uint8_t* originateTimestamp);
+    void setServerResponse(const NtpTimestamp& referenceTimestamp, const NtpTimestamp& receiveTimestamp, const NtpTimestamp& transmitTimestamp, const uint8_t* originateTimestamp);
     uint32_t getTransmitUnixTime();
     uint16_t getTransmitMilliseconds();
 

@@ -53,31 +53,27 @@ uint32_t NtpPacket::getTransmitUnixTime()
     return ntpSeconds - NTP_EPOCH_OFFSET;
 }
 
-void NtpPacket::setServerResponse(uint32_t unixTime, const uint8_t* originateTimestamp)
+void NtpPacket::setServerResponse(const NtpTimestamp& referenceTimestamp, const NtpTimestamp& receiveTimestamp, const NtpTimestamp& transmitTimestamp, const uint8_t* originateTimestamp)
 {
     clear();
 
-    _buffer[0] = 0x1C;
-    _buffer[1] = 2;
-    _buffer[2] = 6;
-    _buffer[3] = 0xEC;
+    _buffer[0] = 0x1C;  // LI=0 VN=3 Mode=4 (server)
+    _buffer[1] = 2;     // Stratum 2
+    _buffer[2] = 6;     // Poll interval
+    _buffer[3] = 0xEC;  // Precision
 
-    writeUint32(4, 0x00010000);
-    writeUint32(8, 0x00010000);
+    writeUint32(4, 0x00010000); // Root Delay
+    writeUint32(8, 0x00010000); // Root Dispersion
 
-    _buffer[12] = 'D';
-    _buffer[13] = 'S';
-    _buffer[14] = '3';
-    _buffer[15] = '2';
+    _buffer[12] = 'D'; // Reference ID
+    _buffer[13] = 'S'; // Reference ID
+    _buffer[14] = '3'; // Reference ID 
+    _buffer[15] = '2'; // Reference ID
 
-    uint16_t millisPart = millis() % 1000;
-
-    writeTimestamp(16, unixTime, millisPart);
-
-    memcpy(&_buffer[24], originateTimestamp, 8);
-
-    writeTimestamp(32, unixTime, millisPart);
-    writeTimestamp(40, unixTime, millisPart);
+    writeTimestamp(16, referenceTimestamp.unixTime, referenceTimestamp.millisPart); // Reference Timestamp
+    memcpy(&_buffer[24], originateTimestamp, 8);                                    // Originate Timestamp
+    writeTimestamp(32, receiveTimestamp.unixTime, receiveTimestamp.millisPart);     // Receive Timestamp
+    writeTimestamp(40, transmitTimestamp.unixTime, transmitTimestamp.millisPart);   // Transmit Timestamp
 }
 
 void NtpPacket::setClientRequest()
