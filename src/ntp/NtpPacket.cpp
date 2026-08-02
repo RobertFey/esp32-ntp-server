@@ -39,12 +39,12 @@ void NtpPacket::writeUint32(int offset, uint32_t value)
     _buffer[offset + 3] = value & 0xFF;
 }
 
-void NtpPacket::writeTimestamp(int offset, uint32_t unixTime)
+void NtpPacket::writeTimestamp(int offset, uint32_t unixTime, uint16_t millisPart)
 {
     uint32_t ntpSeconds = unixTime + NTP_EPOCH_OFFSET;
-    writeUint32(offset,ntpSeconds);
-    // fractionele seconden
-    writeUint32(offset + 4, 0);
+    writeUint32(offset, ntpSeconds);
+    uint32_t ntpFraction = ((uint64_t)millisPart << 32) / 1000;
+    writeUint32(offset + 4, ntpFraction);
 }
 
 uint32_t NtpPacket::getTransmitUnixTime()
@@ -70,12 +70,14 @@ void NtpPacket::setServerResponse(uint32_t unixTime, const uint8_t* originateTim
     _buffer[14] = '3';
     _buffer[15] = '2';
 
-    writeTimestamp(16, unixTime);
+    uint16_t millisPart = millis() % 1000;
+
+    writeTimestamp(16, unixTime, millisPart);
 
     memcpy(&_buffer[24], originateTimestamp, 8);
 
-    writeTimestamp(32, unixTime);
-    writeTimestamp(40, unixTime);
+    writeTimestamp(32, unixTime, millisPart);
+    writeTimestamp(40, unixTime, millisPart);
 }
 
 void NtpPacket::setClientRequest()
@@ -84,4 +86,10 @@ void NtpPacket::setClientRequest()
 
     // LI=0 VN=3 Mode=3 (client)
     _buffer[0] = 0x1B;
+}
+
+uint16_t NtpPacket::getTransmitMilliseconds()
+{
+    uint32_t fraction = readUint32(44);
+    return ((uint64_t)fraction * 1000ULL) >> 32;
 }

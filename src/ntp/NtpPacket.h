@@ -16,6 +16,7 @@ public:
     void setClientRequest();
     void setServerResponse(uint32_t unixTime, const uint8_t* originateTimestamp);
     uint32_t getTransmitUnixTime();
+    uint16_t getTransmitMilliseconds();
 
 private:
     uint8_t _buffer[SIZE];
@@ -23,5 +24,5 @@ private:
     static const uint32_t NTP_EPOCH_OFFSET = 2208988800UL;
     void writeUint32(int offset, uint32_t value);
     uint32_t readUint32(int offset);
-    void writeTimestamp(int offset, uint32_t unixTime);
+    void writeTimestamp(int offset, uint32_t unixTime, uint16_t millisPart);
 };

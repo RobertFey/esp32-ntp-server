@@ -7,8 +7,6 @@
 #include "../../config/ConfigManager.h"
 #include "../../ntp/NtpClient.h"
 
-
-
 extern NtpServer ntpServer;
 extern CommandRegistry commandRegistry;
 extern NtpServer ntpServer;
@@ -16,23 +14,31 @@ extern NtpClient ntpClient;
 extern RTCManager rtcManager;
 extern ConfigManager configManager;
 
-
 bool NtpCommands::handle(const String& command, ICommandInterface& io)
+{
+    if (command == "ntp status")
     {
-        if (command == "ntp status")
-        {
-            io.println("");
-            io.println("NTP Status");
-            io.println("----------");
-            io.println("Requests    : " + String(ntpServer.requestCount()));
-            io.println("Responses   : " + String(ntpServer.responseCount()));
-            io.println("Last Client : " + ntpServer.lastClient());
-            io.println("RTC Time    : " + rtcManager.getDateTimeString());
-            io.println("Last Sync   : " + String(ntpClient.lastSyncTime().isEmpty() ? "Never" : ntpClient.lastSyncTime()));
-            io.println("Sync Status : " + String(ntpClient.lastSyncSuccess() ? "OK" : "FAILED"));
-            io.println("");
+        auto& ntp = configManager.ntp();
 
-            return true;
+        io.println("");
+        io.println("NTP Status");
+        io.println("----------");
+        io.println("");
+        io.println("Server      : " + ntp.server); 
+        io.println("Auto Sync   : " + String(ntp.autoSync ? "ON" : "OFF"));
+        io.println("Interval    : " + String(ntp.syncIntervalHours) + " hours");
+        io.println("");
+        io.println("Requests    : " + String(ntpServer.requestCount()));
+        io.println("Responses   : " + String(ntpServer.responseCount()));
+        io.println("Last Client : " + ntpServer.lastClient());
+        io.println("");
+        io.println("RTC Time    : " + rtcManager.getDateTimeString());
+        io.println("Last Sync   : " + String(ntpClient.lastSyncTime().isEmpty() ? "Never" : ntpClient.lastSyncTime()));
+        io.println("Sync Status : " + String(ntpClient.lastSyncSuccess() ? "OK" : "FAILED"));
+        io.println("Last Result : " + ntpClient.resultToString(ntpClient.lastResult()));
+        io.println("");
+
+        return true;
     }
 
     if (command.startsWith("ntp server "))
@@ -111,7 +117,7 @@ bool NtpCommands::handle(const String& command, ICommandInterface& io)
         return true;
     }
         return false;
-    }
+}
 
 void NtpCommands::printHelp(ICommandInterface& io)
 {

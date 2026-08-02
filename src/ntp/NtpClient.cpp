@@ -142,40 +142,19 @@ NtpSyncResult NtpClient::syncRtcEx()
     return NtpSyncResult::Success;
 }
 
-// NtpSyncResult NtpClient::syncRtcEx()
-// {
-//     uint32_t unixTime;
-
-//     if (!networkManager.isConnected())
-//     {
-//         return NtpSyncResult::NetworkUnavailable;
-//     }
-
-//     if (!queryServer( configManager.ntp().server, unixTime))
-//     {
-//         return NtpSyncResult::Timeout;
-//     }
-
-//     DateTime dt(unixTime);
-
-//     rtcManager.setTime(
-//         dt.year(),
-//         dt.month(),
-//         dt.day(),
-//         dt.hour(),
-//         dt.minute(),
-//         dt.second());
-
-//     return NtpSyncResult::Success;
-// }
-
 String NtpClient::lastSyncTime()
 {
     return _lastSyncTime;
 }
+
 bool NtpClient::lastSyncSuccess()
 {
     return _lastSyncSuccess;
+}
+
+NtpSyncResult NtpClient::lastResult()
+{
+    return _lastResult;
 }
 
 void NtpClient::process()
