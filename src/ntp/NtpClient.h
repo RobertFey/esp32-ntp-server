@@ -25,6 +25,7 @@ public:
     String lastSyncTime();
     bool lastSyncSuccess();
     NtpSyncResult lastResult();
+    
     void process();
 
 private:
@@ -39,5 +40,6 @@ private:
     String _lastSyncTime = "";
     bool _lastSyncSuccess = false;
     bool queryServer(const String& hostname, uint32_t& unixTime);
+    void restoreRunMode();
 };
 

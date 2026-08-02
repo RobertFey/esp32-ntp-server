@@ -15,6 +15,12 @@ extern IndicatorManager indicatorManager;
 
 static const uint32_t NTP_EPOCH_OFFSET = 2208988800UL;
 
+void NtpClient::restoreRunMode()
+{
+    indicatorManager.setRunMode(networkManager.isConnected() ? RunMode::Normal : RunMode::NoNetwork);
+}
+
+
 String NtpClient::resultToString(NtpSyncResult result)
 {
     switch (result)
@@ -100,14 +106,14 @@ NtpSyncResult NtpClient::syncRtcEx()
     if (server.isEmpty())
     {
         _lastSyncSuccess = false;
-        indicatorManager.error();
+        NtpClient::restoreRunMode();
         return NtpSyncResult::DnsLookupFailed;
     }
     
     if (!queryServer(server, unixTime))
     {
         _lastSyncSuccess = false;
-        indicatorManager.error();
+        NtpClient::restoreRunMode();
         return NtpSyncResult::Timeout;
     }
 
@@ -124,7 +130,7 @@ NtpSyncResult NtpClient::syncRtcEx()
     if (!rtcOk)
     {
         _lastSyncSuccess = false;
-        indicatorManager.error();
+        NtpClient::restoreRunMode();
         return NtpSyncResult::RtcUpdateFailed;
     }
 
@@ -143,7 +149,8 @@ NtpSyncResult NtpClient::syncRtcEx()
 
     _lastSyncTime = String(buffer);
     _lastSyncSuccess = true;
-
+    
+    NtpClient::restoreRunMode();
     return NtpSyncResult::Success;
 }
 
